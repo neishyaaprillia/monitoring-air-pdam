@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AquaMonitor PDAM – Monitoring Konsumsi Air per Wilayah</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #0A4D8C;
+    --primary-light: #1565C0;
+    --accent: #00B4D8;
+    --accent-2: #06D6A0;
+    --danger: #EF476F;
+    --warning: #FFB703;
+    --bg: #F0F5FB;
+    --card: #FFFFFF;
+    --sidebar: #05294A;
+    --sidebar-active: #0A4D8C;
+    --text: #1A2B40;
+    --text-muted: #6B7A90;
+    --border: #DDE8F5;
+    --shadow: 0 4px 24px rgba(10,77,140,0.10);
+    --shadow-lg: 0 8px 40px rgba(10,77,140,0.16);
+    --radius: 14px;
+    --radius-sm: 8px;
+    --transition: 0.22s cubic-bezier(0.4,0,0.2,1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    width: 260px;
+    min-height: 100vh;
+    background: var(--sidebar);
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    transition: var(--transition);
+  }
+  .sidebar-brand {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+  }
+  .brand-icon {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent), var(--primary-light));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .brand-text { display: flex; flex-direction: column; }
+  .brand-name { font-weight: 800; font-size: 16px; color: #fff; letter-spacing: -0.5px; }
+  .brand-sub { font-size: 11px; color: rgba(255,255,255,0.45); font-weight: 500; letter-spacing: 0.5px; }
+
+  .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+    padding: 8px 12px 6px;
+    margin-top: 8px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: rgba(255,255,255,0.6);
+    font-weight: 500;
+    font-size: 14px;
+    transition: var(--transition);
+    margin-bottom: 2px;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .nav-item.active { background: var(--accent); color: #fff; font-weight: 700; }
+  .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-badge {
+    margin-left: auto;
+    background: var(--danger);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 20px;
+  }
+
+  .sidebar-footer {
+    padding: 16px 12px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .user-info {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+  }
+  .user-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px; color: #fff;
+  }
+  .user-name { font-weight: 700; font-size: 13px; color: #fff; }
+  .user-role { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+  /* ===== MAIN CONTENT ===== */
+  .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ===== TOPBAR ===== */
+  .topbar {
+    background: #fff;
+    padding: 0 32px;
+    height: 68px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 50;
+    box-shadow: 0 2px 8px rgba(10,77,140,0.06);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .page-title { font-size: 20px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+  .page-subtitle { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+  .topbar-actions { display: flex; align-items: center; gap: 12px; }
+  .topbar-date {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; color: var(--text-muted);
+    background: var(--bg);
+    padding: 6px 14px; border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .btn {
+    padding: 9px 20px;
+    border-radius: var(--radius-sm);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700; font-size: 13px;
+    cursor: pointer; border: none; transition: var(--transition);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-light); transform: translateY(-1px); box-shadow: var(--shadow); }
+  .btn-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--border); }
+  .btn-outline:hover { border-color: var(--primary); background: var(--bg); }
+  .notif-btn {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--bg); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px; position: relative;
+    transition: var(--transition);
+  }
+  .notif-btn:hover { background: var(--border); }
+  .notif-dot {
+    position: absolute; top: 8px; right: 8px;
+    width: 8px; height: 8px;
+    background: var(--danger); border-radius: 50%;
+    border: 2px solid #fff;
+  }
+
+  /* ===== PAGE CONTENT ===== */
+  .page-content { padding: 28px 32px; flex: 1; }
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* ===== STATS CARDS ===== */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition);
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .stat-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+  }
+  .stat-card.blue::before { background: linear-gradient(90deg, var(--primary), var(--accent)); }
+  .stat-card.green::before { background: linear-gradient(90deg, var(--accent-2), #00CC7E); }
+  .stat-card.orange::before { background: linear-gradient(90deg, var(--warning), #FF8C00); }
+  .stat-card.red::before { background: linear-gradient(90deg, var(--danger), #FF6B35); }
+  .stat-label { font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 10px; }
+  .stat-value { font-size: 32px; font-weight: 800; color: var(--text); letter-spacing: -1px; line-height: 1; margin-bottom: 6px; font-family: 'Space Mono', monospace; }
+  .stat-unit { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+  .stat-change { font-size: 12px; font-weight: 700; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+  .stat-change.up { color: var(--accent-2); }
+  .stat-change.down { color: var(--danger); }
+  .stat-icon {
+    position: absolute; top: 20px; right: 20px;
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .stat-icon.blue { background: rgba(0,180,216,0.12); }
+  .stat-icon.green { background: rgba(6,214,160,0.12); }
+  .stat-icon.orange { background: rgba(255,183,3,0.12); }
+  .stat-icon.red { background: rgba(239,71,111,0.12); }
+
+  /* ===== CHART + TABLE GRID ===== */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .card-title { font-size: 16px; font-weight: 800; color: var(--text); }
+  .card-subtitle { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+  .card-action { font-size: 12px; font-weight: 700; color: var(--accent); cursor: pointer; }
+
+  /* ===== BAR CHART ===== */
+  .bar-chart { display: flex; align-items: flex-end; gap: 14px; height: 200px; padding: 0 4px; }
+  .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .bar-wrap { flex: 1; display: flex; align-items: flex-end; width: 100%; }
+  .bar {
+    width: 100%; border-radius: 8px 8px 0 0;
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+  }
+  .bar:hover { filter: brightness(1.1); }
+  .bar-label { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+  .bar-val { font-size: 11px; font-weight: 800; color: var(--text); font-family: 'Space Mono', monospace; }
+
+  /* STATUS LIST */
+  .status-list { display: flex; flex-direction: column; gap: 12px; }
+  .status-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--bg);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .status-item:hover { background: var(--border); }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.normal { background: var(--accent-2); }
+  .status-dot.warning { background: var(--warning); }
+  .status-dot.critical { background: var(--danger); }
+  .status-name { font-weight: 700; font-size: 13px; flex: 1; }
+  .status-vol { font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; color: var(--text-muted); }
+  .status-badge {
+    font-size: 10px; font-weight: 700; padding: 3px 8px;
+    border-radius: 20px; text-transform: uppercase;
+  }
+  .status-badge.normal { background: rgba(6,214,160,0.12); color: var(--accent-2); }
+  .status-badge.warning { background: rgba(255,183,3,0.12); color: #CC8800; }
+  .status-badge.critical { background: rgba(239,71,111,0.12); color: var(--danger); }
+
+  /* TREND CHART */
+  .trend-chart { height: 100px; position: relative; }
+  .trend-svg { width: 100%; height: 100%; }
+
+  /* NOTIF */
+  .notif-list { display: flex; flex-direction: column; gap: 10px; }
+  .notif-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px;
+    border-radius: 10px;
+    border-left: 3px solid;
+    background: var(--bg);
+  }
+  .notif-item.warning { border-color: var(--warning); }
+  .notif-item.critical { border-color: var(--danger); }
+  .notif-item.info { border-color: var(--accent); }
+  .notif-icon { font-size: 18px; }
+  .notif-content { flex: 1; }
+  .notif-title { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+  .notif-desc { font-size: 12px; color: var(--text-muted); }
+  .notif-time { font-size: 11px; color: var(--text-muted); font-family: 'Space Mono', monospace; margin-top: 4px; }
+
+  /* ===== TABLE ===== */
+  .data-table-wrap { overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    text-align: left; padding: 12px 16px;
+    font-size: 11px; font-weight: 800; color: var(--text-muted);
+    letter-spacing: 0.7px; text-transform: uppercase;
+    background: var(--bg);
+    border-bottom: 2px solid var(--border);
+    position: sticky; top: 0;
+  }
+  .data-table td {
+    padding: 13px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .data-table tr:hover td { background: var(--bg); }
+  .data-table tr:last-child td { border-bottom: none; }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-label { font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.3px; text-transform: uppercase; }
+  .form-control {
+    padding: 11px 14px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px; font-weight: 500;
+    color: var(--text);
+    background: var(--card);
+    transition: var(--transition);
+    outline: none;
+  }
+  .form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,180,216,0.15); }
+  .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px; }
+
+  /* PROGRESS BAR */
+  .progress-wrap { background: var(--bg); border-radius: 100px; height: 8px; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 100px; transition: width 1s ease; }
+  .progress-bar.normal { background: linear-gradient(90deg, var(--accent-2), #00CC7E); }
+  .progress-bar.warning { background: linear-gradient(90deg, var(--warning), #FF8C00); }
+  .progress-bar.critical { background: linear-gradient(90deg, var(--danger), #FF6B35); }
+
+  /* LOGIN PAGE */
+  .login-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--sidebar) 0%, #0A3D6B 50%, var(--primary-light) 100%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .login-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 48px;
+    width: 420px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+  }
+  .login-logo {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 32px;
+  }
+  .login-icon {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--accent), var(--primary));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .login-title { font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+  .login-subtitle { font-size: 13px; color: var(--text-muted); }
+  .login-form { display: flex; flex-direction: column; gap: 18px; }
+  .btn-login {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff; border: none; padding: 14px;
+    border-radius: 10px; font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 15px; font-weight: 800; cursor: pointer;
+    transition: var(--transition); width: 100%;
+  }
+  .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(10,77,140,0.4); }
+
+  /* CHIP */
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+  }
+  .chip.blue { background: rgba(0,180,216,0.12); color: var(--accent); }
+  .chip.green { background: rgba(6,214,160,0.12); color: #00A877; }
+  .chip.orange { background: rgba(255,183,3,0.12); color: #CC8800; }
+  .chip.red { background: rgba(239,71,111,0.12); color: var(--danger); }
+
+  /* TABS */
+  .tab-bar { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 10px; width: fit-content; margin-bottom: 20px; }
+  .tab-btn {
+    padding: 8px 18px; border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px; font-weight: 700; cursor: pointer; border: none;
+    background: transparent; color: var(--text-muted); transition: var(--transition);
+  }
+  .tab-btn.active { background: var(--card); color: var(--primary); box-shadow: 0 2px 8px rgba(10,77,140,0.10); }
+
+  /* PULSE DOT */
+  .pulse-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent-2);
+    position: relative; display: inline-block;
+  }
+  .pulse-dot::after {
+    content: ''; position: absolute;
+    top: -4px; left: -4px; right: -4px; bottom: -4px;
+    border-radius: 50%; background: rgba(6,214,160,0.3);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.2); opacity: 0; } }
+
+  .section-title { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; margin-bottom: 6px; }
+  .section-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN PAGE ===== -->
+<div id="loginPage" class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-icon">💧</div>
+      <div>
+        <div class="login-title">AquaMonitor</div>
+        <div class="login-subtitle">Sistem Monitoring Air PDAM</div>
+      </div>
+    </div>
+    <div class="login-form">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-control" type="email" value="admin@pdam.co.id" placeholder="Email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-control" type="password" value="••••••••" placeholder="Password">
+      </div>
+      <button class="btn-login" onclick="showApp()">🔐 Masuk ke Sistem</button>
+    </div>
+    <div style="text-align:center;margin-top:20px;font-size:12px;color:var(--text-muted)">
+      Demo: admin@pdam.co.id | password: admin123
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="appContainer" style="display:none;width:100%;display:none;flex:1">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <a class="brand-logo" href="#">
+      <div class="brand-icon">💧</div>
+      <div class="brand-text">
+        <div class="brand-name">AquaMonitor</div>
+        <div class="brand-sub">PDAM Monitoring System</div>
+      </div>
+    </a>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Utama</div>
+    <a class="nav-item active" onclick="showPage('dashboard',this)">
+      <span class="nav-icon">📊</span> Dashboard
+    </a>
+    <a class="nav-item" onclick="showPage('input',this)">
+      <span class="nav-icon">📝</span> Input Pemakaian
+    </a>
+    <a class="nav-item" onclick="showPage('monitoring',this)">
+      <span class="nav-icon">🗺️</span> Monitoring Wilayah
+    </a>
+    <a class="nav-item" onclick="showPage('laporan',this)">
+      <span class="nav-icon">📄</span> Laporan <span class="nav-badge">Baru</span>
+    </a>
+    <div class="nav-section-label">Manajemen</div>
+    <a class="nav-item" onclick="showPage('wilayah',this)">
+      <span class="nav-icon">📍</span> Data Wilayah
+    </a>
+    <a class="nav-item" onclick="showPage('pengguna',this)">
+      <span class="nav-icon">👥</span> Pengguna
+    </a>
+    <a class="nav-item" onclick="showPage('notifikasi',this)">
+      <span class="nav-icon">🔔</span> Notifikasi <span class="nav-badge">3</span>
+    </a>
+    <div class="nav-section-label">Sistem</div>
+    <a class="nav-item" onclick="showPage('pengaturan',this)">
+      <span class="nav-icon">⚙️</span> Pengaturan
+    </a>
+    <a class="nav-item" onclick="logout()">
+      <span class="nav-icon">🚪</span> Keluar
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar">NA</div>
+      <div>
+        <div class="user-name">Neishya Aprillia</div>
+        <div class="user-role">Administrator</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div>
+        <div class="page-title" id="pageTitle">Dashboard Monitoring</div>
+        <div class="page-subtitle" id="pageSubtitle">Ringkasan konsumsi air per wilayah</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="topbar-date" id="topbarDate"></div>
+      <div class="notif-btn" onclick="showPage('notifikasi',null)">🔔<span class="notif-dot"></span></div>
+      <button class="btn btn-primary" onclick="showPage('input',null)">+ Input Data</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+
+    <!-- ========== DASHBOARD ========== -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-icon blue">💧</div>
+          <div class="stat-label">Total Konsumsi Bulan Ini</div>
+          <div class="stat-value">12,847 <span class="stat-unit">m³</span></div>
+          <div class="stat-change up">↑ 4.2% dari bulan lalu</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon green">📍</div>
+          <div class="stat-label">Wilayah Terpantau</div>
+          <div class="stat-value">8 <span class="stat-unit">wilayah</span></div>
+          <div class="stat-change up">✓ Semua aktif</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon orange">⚠️</div>
+          <div class="stat-label">Wilayah Peringatan</div>
+          <div class="stat-value">2 <span class="stat-unit">wilayah</span></div>
+          <div class="stat-change down">↑ 1 dari bulan lalu</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon red">🚨</div>
+          <div class="stat-label">Konsumsi Kritis</div>
+          <div class="stat-value">1 <span class="stat-unit">wilayah</span></div>
+          <div class="stat-change down">⚠ Perlu tindakan segera</div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Konsumsi Air per Wilayah</div>
+              <div class="card-subtitle">Periode: Juni 2026 (m³)</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <div class="chip blue">● Normal</div>
+              <div class="chip orange">● Warning</div>
+              <div class="chip red">● Kritis</div>
+            </div>
+          </div>
+          <div class="bar-chart" id="barChart"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Status Wilayah</div>
+              <div class="card-subtitle">Juni 2026</div>
+            </div>
+            <div class="pulse-dot"></div>
+          </div>
+          <div class="status-list" id="statusList"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Tren Konsumsi 6 Bulan</div>
+              <div class="card-subtitle">Jan – Jun 2026</div>
+            </div>
+          </div>
+          <div class="trend-chart">
+            <svg class="trend-svg" id="trendChart" viewBox="0 0 400 100" preserveAspectRatio="none"></svg>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px">
+            <span style="font-size:11px;color:var(--text-muted)">Jan</span>
+            <span style="font-size:11px;color:var(--text-muted)">Feb</span>
+            <span style="font-size:11px;color:var(--text-muted)">Mar</span>
+            <span style="font-size:11px;color:var(--text-muted)">Apr</span>
+            <span style="font-size:11px;color:var(--text-muted)">Mei</span>
+            <span style="font-size:11px;color:var(--text-muted)">Jun</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Notifikasi Terbaru</div>
+            <div class="card-action" onclick="showPage('notifikasi',null)">Lihat Semua →</div>
+          </div>
+          <div class="notif-list">
+            <div class="notif-item critical">
+              <div class="notif-icon">🚨</div>
+              <div class="notif-content">
+                <div class="notif-title">Konsumsi Kritis – Wilayah Tanah Abang</div>
+                <div class="notif-desc">Pemakaian 2.450 m³ melebihi threshold 2.000 m³</div>
+                <div class="notif-time">10 menit yang lalu</div>
+              </div>
+            </div>
+            <div class="notif-item warning">
+              <div class="notif-icon">⚠️</div>
+              <div class="notif-content">
+                <div class="notif-title">Peringatan – Wilayah Kebayoran</div>
+                <div class="notif-desc">Pemakaian mendekati batas threshold (92%)</div>
+                <div class="notif-time">2 jam yang lalu</div>
+              </div>
+            </div>
+            <div class="notif-item info">
+              <div class="notif-icon">✅</div>
+              <div class="notif-content">
+                <div class="notif-title">Data berhasil diperbarui – Wilayah Menteng</div>
+                <div class="notif-desc">Operator Rahman menginput data Juni 2026</div>
+                <div class="notif-time">3 jam yang lalu</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== INPUT DATA ========== -->
+    <div class="page" id="page-input">
+      <div class="section-title">Input Data Pemakaian Air</div>
+      <div class="section-sub">Masukkan data konsumsi air per wilayah secara periodik</div>
+      <div style="display:grid;grid-template-columns:1fr 380px;gap:20px">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Form Input Pemakaian Air</div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Wilayah</label>
+              <select class="form-control">
+                <option>-- Pilih Wilayah --</option>
+                <option>Menteng</option>
+                <option>Tanah Abang</option>
+                <option>Kebayoran Baru</option>
+                <option>Mampang Prapatan</option>
+                <option>Setia Budi</option>
+                <option>Tebet</option>
+                <option>Pasar Minggu</option>
+                <option>Pesanggrahan</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Periode Bulan</label>
+              <select class="form-control">
+                <option>Juni 2026</option>
+                <option>Mei 2026</option>
+                <option>April 2026</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Volume Pemakaian (m³)</label>
+              <input class="form-control" type="number" placeholder="Masukkan volume dalam m³">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tanggal Input</label>
+              <input class="form-control" type="date" value="2026-06-14">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nama Operator</label>
+              <input class="form-control" type="text" value="Neishya Aprillia">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status Data</label>
+              <select class="form-control">
+                <option>Final</option>
+                <option>Draft</option>
+                <option>Revisi</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label class="form-label">Keterangan (Opsional)</label>
+              <textarea class="form-control" rows="3" placeholder="Catatan tambahan mengenai data ini..."></textarea>
+            </div>
+            <div class="form-actions full">
+              <button class="btn btn-outline">Batal</button>
+              <button class="btn btn-primary" onclick="showAlert('✅ Data pemakaian air berhasil disimpan!')">💾 Simpan Data</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Riwayat Input Terbaru</div></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="status-item">
+              <div class="status-dot normal"></div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:13px">Menteng</div>
+                <div style="font-size:11px;color:var(--text-muted)">Jun 2026 • Rahman</div>
+              </div>
+              <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700">1.240 m³</div>
+            </div>
+            <div class="status-item">
+              <div class="status-dot warning"></div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:13px">Kebayoran Baru</div>
+                <div style="font-size:11px;color:var(--text-muted)">Jun 2026 • Siti</div>
+              </div>
+              <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700">1.820 m³</div>
+            </div>
+            <div class="status-item">
+              <div class="status-dot critical"></div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:13px">Tanah Abang</div>
+                <div style="font-size:11px;color:var(--text-muted)">Jun 2026 • Budi</div>
+              </div>
+              <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700">2.450 m³</div>
+            </div>
+            <div class="status-item">
+              <div class="status-dot normal"></div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:13px">Tebet</div>
+                <div style="font-size:11px;color:var(--text-muted)">Jun 2026 • Dewi</div>
+              </div>
+              <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700">980 m³</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== MONITORING ========== -->
+    <div class="page" id="page-monitoring">
+      <div class="section-title">Monitoring Wilayah</div>
+      <div class="section-sub">Pantau konsumsi dan status air setiap wilayah secara detail</div>
+      <div class="card">
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Kode</th>
+                <th>Nama Wilayah</th>
+                <th>Konsumsi Jun</th>
+                <th>Threshold</th>
+                <th>% Penggunaan</th>
+                <th>Status</th>
+                <th>Operator</th>
+                <th>Update</th>
+              </tr>
+            </thead>
+            <tbody id="monitoringTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== LAPORAN ========== -->
+    <div class="page" id="page-laporan">
+      <div class="section-title">Laporan Pemakaian Air</div>
+      <div class="section-sub">Buat dan ekspor laporan berdasarkan filter periode dan wilayah</div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title" style="margin-bottom:16px">Filter Laporan</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:14px;align-items:flex-end">
+          <div class="form-group">
+            <label class="form-label">Wilayah</label>
+            <select class="form-control"><option>Semua Wilayah</option><option>Menteng</option><option>Tanah Abang</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Periode Awal</label>
+            <input class="form-control" type="month" value="2026-01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Periode Akhir</label>
+            <input class="form-control" type="month" value="2026-06">
+          </div>
+          <button class="btn btn-primary">🔍 Tampilkan</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Rekap Pemakaian Air</div>
+            <div class="card-subtitle">Januari – Juni 2026 | Semua Wilayah</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline" onclick="showAlert('📄 Laporan PDF sedang diunduh...')">📄 Ekspor PDF</button>
+            <button class="btn btn-primary" onclick="showAlert('📊 File Excel berhasil diunduh!')">📊 Ekspor Excel</button>
+          </div>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Wilayah</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>Mei</th><th>Jun</th><th>Total (m³)</th><th>Rata-rata</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><b>Menteng</b></td><td>1.180</td><td>1.195</td><td>1.210</td><td>1.200</td><td>1.225</td><td>1.240</td><td><b>7.250</b></td><td>1.208</td></tr>
+              <tr><td><b>Tanah Abang</b></td><td>2.100</td><td>2.150</td><td>2.200</td><td>2.300</td><td>2.380</td><td>2.450</td><td style="color:var(--danger)"><b>13.580</b></td><td>2.263</td></tr>
+              <tr><td><b>Kebayoran Baru</b></td><td>1.600</td><td>1.650</td><td>1.680</td><td>1.700</td><td>1.780</td><td>1.820</td><td><b>10.230</b></td><td>1.705</td></tr>
+              <tr><td><b>Mampang</b></td><td>890</td><td>910</td><td>920</td><td>935</td><td>950</td><td>960</td><td><b>5.565</b></td><td>927</td></tr>
+              <tr><td><b>Setia Budi</b></td><td>760</td><td>775</td><td>790</td><td>800</td><td>810</td><td>820</td><td><b>4.755</b></td><td>792</td></tr>
+              <tr><td><b>Tebet</b></td><td>950</td><td>960</td><td>965</td><td>970</td><td>975</td><td>980</td><td><b>5.800</b></td><td>966</td></tr>
+              <tr style="background:var(--bg)"><td><b>TOTAL</b></td><td><b>7.480</b></td><td><b>7.640</b></td><td><b>7.765</b></td><td><b>7.905</b></td><td><b>8.120</b></td><td><b>8.270</b></td><td><b>47.180</b></td><td><b>7.863</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== WILAYAH ========== -->
+    <div class="page" id="page-wilayah">
+      <div class="section-title">Manajemen Data Wilayah</div>
+      <div class="section-sub">Kelola daftar wilayah layanan PDAM</div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Daftar Wilayah</div>
+          <button class="btn btn-primary" onclick="showAlert('Form tambah wilayah baru akan ditampilkan')">+ Tambah Wilayah</button>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Kode</th><th>Nama Wilayah</th><th>Threshold (m³)</th><th>Operator</th><th>Status</th><th>Aksi</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="chip blue">WIL-001</span></td><td><b>Menteng</b></td><td>1.500</td><td>Rahman Hidayat</td><td><span class="chip green">● Aktif</span></td><td><button class="btn btn-outline" style="padding:5px 12px;font-size:12px">Edit</button></td></tr>
+              <tr><td><span class="chip blue">WIL-002</span></td><td><b>Tanah Abang</b></td><td>2.000</td><td>Budi Santoso</td><td><span class="chip red">● Kritis</span></td><td><button class="btn btn-outline" style="padding:5px 12px;font-size:12px">Edit</button></td></tr>
+              <tr><td><span class="chip blue">WIL-003</span></td><td><b>Kebayoran Baru</b></td><td>2.000</td><td>Siti Rahayu</td><td><span class="chip orange">● Warning</span></td><td><button class="btn btn-outline" style="padding:5px 12px;font-size:12px">Edit</button></td></tr>
+              <tr><td><span class="chip blue">WIL-004</span></td><td><b>Mampang Prapatan</b></td><td>1.200</td><td>Dewi Kusuma</td><td><span class="chip green">● Aktif</span></td><td><button class="btn btn-outline" style="padding:5px 12px;font-size:12px">Edit</button></td></tr>
+              <tr><td><span class="chip blue">WIL-005</span></td><td><b>Setia Budi</b></td><td>1.000</td><td>Eko Prasetyo</td><td><span class="chip green">● Aktif</span></td><td><button class="btn btn-outline" style="padding:5px 12px;font-size:12px">Edit</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== PENGGUNA ========== -->
+    <div class="page" id="page-pengguna">
+      <div class="section-title">Manajemen Pengguna</div>
+      <div class="section-sub">Kelola akun dan hak akses pengguna sistem</div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Daftar Pengguna</div>
+          <button class="btn btn-primary" onclick="showAlert('Form tambah pengguna baru akan ditampilkan')">+ Tambah Pengguna</button>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Nama</th><th>Email</th><th>Role</th><th>Wilayah Tugas</th><th>Status</th><th>Terakhir Login</th><th>Aksi</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><b>Neishya Aprillia</b></td><td>neishya@pdam.co.id</td><td><span class="chip blue">Admin</span></td><td>Semua Wilayah</td><td><span class="chip green">Aktif</span></td><td>14 Jun 2026, 09:30</td><td><button class="btn btn-outline" style="padding:5px 12px;font-size:12px">Edit</button></td></tr>
+              <tr><td><b>Rahman Hidayat</b></td><td>rahman@pdam.co.id</td><td><span class="chip green">Operator</span></td><td>Menteng</td><td><span class="chip green">Aktif</span></td><td>14 Jun 2026, 08:15</td><td><button class="btn btn-outline" style="padding:5px 12px;font-size:12px">Edit</button></td></tr>
+              <tr><td><b>Budi Santoso</b></td><td>budi@pdam.co.id</td><td><span class="chip green">Operator</span></td><td>Tanah Abang</td><td><span class="chip green">Aktif</span></td><td>14 Jun 2026, 07:45</td><td><button class="btn btn-outline" style="padding:5px 12px;font-size:12px">Edit</button></td></tr>
+              <tr><td><b>Siti Rahayu</b></td><td>siti@pdam.co.id</td><td><span class="chip green">Operator</span></td><td>Kebayoran Baru</td><td><span class="chip green">Aktif</span></td><td>13 Jun 2026, 16:20</td><td><button class="btn btn-outline" style="padding:5px 12px;font-size:12px">Edit</button></td></tr>
+              <tr><td><b>Dewi Kusuma</b></td><td>dewi@pdam.co.id</td><td><span class="chip green">Operator</span></td><td>Mampang</td><td><span class="chip orange">Nonaktif</span></td><td>10 Jun 2026, 11:00</td><td><button class="btn btn-outline" style="padding:5px 12px;font-size:12px">Edit</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== NOTIFIKASI ========== -->
+    <div class="page" id="page-notifikasi">
+      <div class="section-title">Notifikasi Sistem</div>
+      <div class="section-sub">Pantau peringatan dan pemberitahuan konsumsi air</div>
+      <div class="card">
+        <div class="notif-list">
+          <div class="notif-item critical">
+            <div class="notif-icon">🚨</div>
+            <div class="notif-content">
+              <div class="notif-title">KRITIS: Konsumsi Wilayah Tanah Abang Melebihi Threshold</div>
+              <div class="notif-desc">Pemakaian bulan Juni mencapai 2.450 m³, melebihi threshold 2.000 m³ (122.5%). Perlu tindakan segera dari tim pengelola.</div>
+              <div class="notif-time">14 Jun 2026, 10:23 WIB</div>
+            </div>
+          </div>
+          <div class="notif-item warning">
+            <div class="notif-icon">⚠️</div>
+            <div class="notif-content">
+              <div class="notif-title">PERINGATAN: Wilayah Kebayoran Baru Mendekati Threshold</div>
+              <div class="notif-desc">Konsumsi saat ini 1.820 m³ dari threshold 2.000 m³ (91%). Pantau perkembangan lebih lanjut.</div>
+              <div class="notif-time">14 Jun 2026, 08:45 WIB</div>
+            </div>
+          </div>
+          <div class="notif-item info">
+            <div class="notif-icon">📊</div>
+            <div class="notif-content">
+              <div class="notif-title">Tren Kenaikan: Konsumsi Total Naik 4.2% dari Bulan Lalu</div>
+              <div class="notif-desc">Total konsumsi Juni 2026 mencapai 12.847 m³, meningkat dibanding Mei 2026 (12.328 m³). Lakukan analisis lebih lanjut.</div>
+              <div class="notif-time">14 Jun 2026, 06:00 WIB (Otomatis)</div>
+            </div>
+          </div>
+          <div class="notif-item info">
+            <div class="notif-icon">✅</div>
+            <div class="notif-content">
+              <div class="notif-title">Data Diinput: Wilayah Menteng – Juni 2026</div>
+              <div class="notif-desc">Operator Rahman Hidayat berhasil menginput data pemakaian air wilayah Menteng sebesar 1.240 m³.</div>
+              <div class="notif-time">14 Jun 2026, 08:15 WIB</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== PENGATURAN ========== -->
+    <div class="page" id="page-pengaturan">
+      <div class="section-title">Pengaturan Sistem</div>
+      <div class="section-sub">Konfigurasi parameter dan preferensi sistem</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:20px">Konfigurasi Threshold Global</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label class="form-label">Default Threshold Konsumsi (m³/bulan)</label>
+              <input class="form-control" type="number" value="1500">
+            </div>
+            <div class="form-group full">
+              <label class="form-label">Batas Warning (%)</label>
+              <input class="form-control" type="number" value="80">
+            </div>
+            <div class="form-group full">
+              <label class="form-label">Batas Kritis (%)</label>
+              <input class="form-control" type="number" value="100">
+            </div>
+            <div class="form-actions full">
+              <button class="btn btn-primary" onclick="showAlert('✅ Pengaturan threshold berhasil disimpan!')">Simpan Perubahan</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:20px">Informasi Sistem</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="status-item"><span>📦</span><span style="flex:1;font-weight:600">Versi Sistem</span><span class="chip blue">v1.0.0</span></div>
+            <div class="status-item"><span>🗄️</span><span style="flex:1;font-weight:600">Database</span><span class="chip green">MySQL 8.0 ● Online</span></div>
+            <div class="status-item"><span>🔒</span><span style="flex:1;font-weight:600">Enkripsi</span><span class="chip blue">HTTPS/TLS 1.3</span></div>
+            <div class="status-item"><span>💾</span><span style="flex:1;font-weight:600">Backup Terakhir</span><span class="chip green">13 Jun 2026 23:00</span></div>
+            <div class="status-item"><span>👥</span><span style="flex:1;font-weight:600">Total Pengguna</span><span class="chip blue">5 akun aktif</span></div>
+            <div class="status-item"><span>🕐</span><span style="flex:1;font-weight:600">Uptime Server</span><span class="chip green">99.8%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- Alert Toast -->
+<div id="alertToast" style="position:fixed;top:20px;right:20px;background:var(--text);color:#fff;padding:14px 20px;border-radius:12px;font-weight:700;font-size:14px;z-index:9999;display:none;box-shadow:var(--shadow-lg);max-width:320px;transition:var(--transition)"></div>
+
+<script>
+const wilayahData = [
+  { kode:'WIL-001', nama:'Menteng', konsumsi:1240, threshold:1500, status:'normal', operator:'Rahman H.' },
+  { kode:'WIL-002', nama:'Tanah Abang', konsumsi:2450, threshold:2000, status:'critical', operator:'Budi S.' },
+  { kode:'WIL-003', nama:'Kebayoran Baru', konsumsi:1820, threshold:2000, status:'warning', operator:'Siti R.' },
+  { kode:'WIL-004', nama:'Mampang Prapatan', konsumsi:960, threshold:1200, status:'normal', operator:'Dewi K.' },
+  { kode:'WIL-005', nama:'Setia Budi', konsumsi:820, threshold:1000, status:'normal', operator:'Eko P.' },
+  { kode:'WIL-006', nama:'Tebet', konsumsi:980, threshold:1200, status:'normal', operator:'Ari W.' },
+  { kode:'WIL-007', nama:'Pasar Minggu', konsumsi:1450, threshold:1800, status:'normal', operator:'Lina S.' },
+  { kode:'WIL-008', nama:'Pesanggrahan', konsumsi:1127, threshold:1500, status:'normal', operator:'Iqbal M.' },
+];
+
+const colors = { normal: '#06D6A0', warning: '#FFB703', critical: '#EF476F' };
+const trendData = [10200, 10800, 11200, 11500, 12328, 12847];
+
+function showApp() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('appContainer').style.display = 'flex';
+  initCharts();
+  setDate();
+}
+function logout() {
+  document.getElementById('appContainer').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+}
+function setDate() {
+  const now = new Date();
+  document.getElementById('topbarDate').textContent = now.toLocaleDateString('id-ID', {weekday:'short',day:'numeric',month:'short',year:'numeric'});
+}
+function showPage(id, navEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(navEl) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    navEl.classList.add('active');
+  }
+  const titles = {
+    dashboard:['Dashboard Monitoring','Ringkasan konsumsi air per wilayah'],
+    input:['Input Data Pemakaian','Catat data konsumsi air wilayah'],
+    monitoring:['Monitoring Wilayah','Status real-time semua wilayah'],
+    laporan:['Laporan & Ekspor','Generate laporan pemakaian air'],
+    wilayah:['Manajemen Wilayah','Kelola data wilayah layanan'],
+    pengguna:['Manajemen Pengguna','Kelola akun dan hak akses'],
+    notifikasi:['Notifikasi','Peringatan dan pemberitahuan sistem'],
+    pengaturan:['Pengaturan Sistem','Konfigurasi dan parameter sistem'],
+  };
+  if(titles[id]) {
+    document.getElementById('pageTitle').textContent = titles[id][0];
+    document.getElementById('pageSubtitle').textContent = titles[id][1];
+  }
+}
+function showAlert(msg) {
+  const el = document.getElementById('alertToast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+function initCharts() {
+  // Bar chart
+  const chart = document.getElementById('barChart');
+  chart.innerHTML = '';
+  const max = Math.max(...wilayahData.map(w=>w.konsumsi));
+  wilayahData.forEach(w => {
+    const pct = (w.konsumsi / max) * 100;
+    const color = colors[w.status];
+    const group = document.createElement('div');
+    group.className = 'bar-group';
+    group.innerHTML = `
+      <div class="bar-val">${w.konsumsi.toLocaleString()}</div>
+      <div class="bar-wrap">
+        <div class="bar" style="height:${pct}%;background:${color};opacity:0.9" title="${w.nama}: ${w.konsumsi} m³"></div>
+      </div>
+      <div class="bar-label">${w.nama.split(' ')[0]}</div>
+    `;
+    chart.appendChild(group);
+  });
+
+  // Status list
+  const list = document.getElementById('statusList');
+  list.innerHTML = '';
+  wilayahData.slice(0,6).forEach(w => {
+    const pct = Math.round((w.konsumsi/w.threshold)*100);
+    const barClass = w.status === 'critical' ? 'critical' : w.status === 'warning' ? 'warning' : 'normal';
+    const badgeText = w.status === 'critical' ? 'Kritis' : w.status === 'warning' ? 'Warning' : 'Normal';
+    const item = document.createElement('div');
+    item.className = 'status-item';
+    item.innerHTML = `
+      <div class="status-dot ${w.status}"></div>
+      <div style="flex:1">
+        <div class="status-name">${w.nama}</div>
+        <div style="margin-top:4px">
+          <div class="progress-wrap"><div class="progress-bar ${barClass}" style="width:${Math.min(pct,100)}%"></div></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${w.konsumsi.toLocaleString()} / ${w.threshold.toLocaleString()} m³ (${pct}%)</div>
+      </div>
+      <div class="status-badge ${w.status}">${badgeText}</div>
+    `;
+    list.appendChild(item);
+  });
+
+  // Monitoring table
+  const tbody = document.getElementById('monitoringTable');
+  tbody.innerHTML = '';
+  wilayahData.forEach(w => {
+    const pct = Math.round((w.konsumsi/w.threshold)*100);
+    const barClass = w.status === 'critical' ? 'critical' : w.status === 'warning' ? 'warning' : 'normal';
+    const badgeText = w.status === 'critical' ? 'Kritis' : w.status === 'warning' ? 'Warning' : 'Normal';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="chip blue">${w.kode}</span></td>
+      <td><b>${w.nama}</b></td>
+      <td><span style="font-family:'Space Mono',monospace;font-weight:700">${w.konsumsi.toLocaleString()} m³</span></td>
+      <td><span style="color:var(--text-muted)">${w.threshold.toLocaleString()} m³</span></td>
+      <td style="min-width:140px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1"><div class="progress-wrap"><div class="progress-bar ${barClass}" style="width:${Math.min(pct,100)}%"></div></div></div>
+          <span style="font-size:12px;font-weight:800;min-width:38px;text-align:right">${pct}%</span>
+        </div>
+      </td>
+      <td><span class="status-badge ${w.status}">${badgeText}</span></td>
+      <td>${w.operator}</td>
+      <td style="color:var(--text-muted);font-size:12px">14 Jun 2026</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Trend chart
+  const svg = document.getElementById('trendChart');
+  const mn = Math.min(...trendData), mx = Math.max(...trendData);
+  const pad = (mx - mn) * 0.1;
+  const points = trendData.map((v, i) => {
+    const x = (i / (trendData.length-1)) * 380 + 10;
+    const y = 90 - ((v - mn + pad) / (mx - mn + pad*2)) * 80;
+    return `${x},${y}`;
+  }).join(' ');
+  const fill = trendData.map((v, i) => {
+    const x = (i / (trendData.length-1)) * 380 + 10;
+    const y = 90 - ((v - mn + pad) / (mx - mn + pad*2)) * 80;
+    return `${x},${y}`;
+  });
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#00B4D8" stop-opacity="0.3"/>
+        <stop offset="100%" stop-color="#00B4D8" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <polygon points="${fill.join(' ')} 390,100 0,100" fill="url(#trendGrad)"/>
+    <polyline points="${points}" fill="none" stroke="#00B4D8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${fill.map((p,i) => `<circle cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" r="4" fill="#00B4D8" stroke="white" stroke-width="2"/>`).join('')}
+  `;
+}
+
+// Auto-login for demo
+window.onload = () => { setDate(); }
+</script>
+</body>
+</html>
